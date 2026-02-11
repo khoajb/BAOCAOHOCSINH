@@ -16,7 +16,7 @@
         .gradient-bg { background: linear-gradient(135deg, #007b5e 0%, #004d3b 100%); }
         .chart-container { position: relative; height: 300px; width: 100%; }
         
-        /* Hiệu ứng Avatar từ Ver 20 */
+        /* Hiệu ứng Avatar */
         .avatar-container { 
             width: 85px; height: 85px; border-radius: 50%; border: 4px solid #fff; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; 
@@ -29,6 +29,9 @@
 
         .class-photo-card { transition: all 0.3s ease; border-radius: 20px; overflow: hidden; height: 200px; }
         .class-photo-card:hover { transform: scale(1.03); box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.1); }
+        
+        #attendance-list::-webkit-scrollbar { width: 4px; }
+        #attendance-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -86,11 +89,14 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div class="bg-white p-8 rounded-[3rem] shadow-md border border-gray-100 flex flex-col items-center">
+                <div class="bg-white p-8 rounded-[3rem] shadow-md border border-gray-100 flex flex-col items-center text-center">
                     <h3 class="font-bold text-gray-400 mb-6 text-[11px] uppercase italic self-start flex items-center gap-2"><i class="fas fa-check-double text-sky-500"></i> Tỷ lệ chuyên cần</h3>
-                    <div class="w-full h-[250px]"><canvas id="attendanceChart"></canvas></div>
-                    <p id="attendance-status" class="mt-6 font-black text-emerald-700 text-3xl italic">0/12 Buổi</p>
+                    <div class="w-full h-[220px]"><canvas id="attendanceChart"></canvas></div>
+                    <p id="attendance-status" class="mt-4 font-black text-emerald-700 text-3xl italic">0/12 Buổi</p>
+                    
+                    <div id="attendance-list" class="mt-4 flex flex-wrap justify-center gap-2 max-h-[100px] overflow-y-auto w-full px-2"></div>
                 </div>
+
                 <div class="bg-white p-8 rounded-[3rem] shadow-md border border-gray-100 flex flex-col items-center">
                     <h3 class="font-bold text-gray-400 mb-6 text-[11px] uppercase italic self-start flex items-center gap-2"><i class="fas fa-medal text-orange-500"></i> Đánh giá năng lực cốt lõi</h3>
                     <div class="w-full h-[250px]"><canvas id="skillChart"></canvas></div>
@@ -147,12 +153,10 @@
             document.getElementById('txt-hocphan').innerText = data.hocPhan;
             document.getElementById('txt-nhanxet').innerText = data.nhanXet;
             
-            // Render Avatar (Logic chuẩn ver 20)
             const av = document.getElementById('user-avatar');
             const avId = data.avatar.match(/[-\w]{25,}/);
             av.src = avId ? `https://drive.google.com/thumbnail?id=${avId[0]}&sz=w300` : `https://ui-avatars.com/api/?name=${data.username}&background=007b5e&color=fff`;
 
-            // Render Photos
             const photoGrid = document.getElementById('grid-class-photos');
             photoGrid.innerHTML = '';
             if (data.images) {
@@ -183,17 +187,36 @@
         }
 
         function drawAttendanceChart(str) {
-            const count = str ? str.split(/[,.]/).filter(x => x.trim()).length : 0;
+            const dates = str ? str.split(/[,.]/).map(d => d.trim()).filter(x => x !== "") : [];
+            const count = dates.length;
             document.getElementById('attendance-status').innerText = `${count}/12 Buổi`;
+            
+            // Bảng màu sắc cho các tag ngày học
+            const tagColors = [
+                'bg-blue-100 text-blue-700 border-blue-200',
+                'bg-purple-100 text-purple-700 border-purple-200',
+                'bg-emerald-100 text-emerald-700 border-emerald-200',
+                'bg-orange-100 text-orange-700 border-orange-200',
+                'bg-pink-100 text-pink-700 border-pink-200',
+                'bg-indigo-100 text-indigo-700 border-indigo-200'
+            ];
+
+            const listContainer = document.getElementById('attendance-list');
+            listContainer.innerHTML = dates.map((date, index) => {
+                const colorClass = tagColors[index % tagColors.length];
+                return `<span class="px-3 py-1 rounded-full text-[10px] font-bold border shadow-sm ${colorClass}">
+                            <i class="far fa-calendar-check mr-1"></i> ${date}
+                        </span>`;
+            }).join('');
+
             if (aChart) aChart.destroy();
             aChart = new Chart(document.getElementById('attendanceChart'), {
                 type: 'doughnut',
                 data: { labels: ['Học', 'Nghỉ'], datasets: [{ data: [count, 12 - count], backgroundColor: ['#10b981', '#f1f5f9'], borderWeight: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
             });
         }
 
-        // BIỂU ĐỒ CỘT CHO 4 MỤC KỸ NĂNG (TRỰC QUAN HƠN)
         function drawSkillChart(kn) {
             if (kChart) kChart.destroy();
             kChart = new Chart(document.getElementById('skillChart'), {
