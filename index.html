@@ -19,6 +19,17 @@
         .chart-container { position: relative; height: 350px; width: 100%; }
         .class-photo-card { transition: all 0.3s ease; border-radius: 20px; overflow: hidden; height: 200px; }
         .class-photo-card:hover { transform: scale(1.02); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        
+        .avatar-container {
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            border: 4px solid #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+            background-color: #f1f5f9;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -29,13 +40,15 @@
             <p class="text-emerald-100 text-xl font-light">Cổng thông tin học tập và quản lý hình ảnh lớp học.</p>
         </div>
         <div class="lg:w-5/12 flex items-center justify-center p-8 bg-white">
-            <div class="w-full max-w-sm">
-                <h2 class="text-3xl font-black mb-8 text-gray-800 uppercase text-center border-b pb-4">Đăng nhập</h2>
-                <form onsubmit="handleLogin(event)" class="space-y-6">
-                    <input type="text" id="username" placeholder="Tên học sinh" required class="w-full p-4 rounded-2xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
-                    <input type="password" id="password" placeholder="Mật khẩu" required class="w-full p-4 rounded-2xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
-                    <button type="submit" id="btn-login" class="w-full bg-[#007b5e] hover:bg-emerald-800 text-white font-bold py-4 rounded-2xl shadow-lg uppercase">Xem kết quả</button>
-                </form>
+            <div class="w-full max-sm:px-4">
+                <div class="max-w-sm mx-auto">
+                    <h2 class="text-3xl font-black mb-8 text-gray-800 uppercase text-center border-b pb-4">Đăng nhập</h2>
+                    <form onsubmit="handleLogin(event)" class="space-y-6">
+                        <input type="text" id="username" placeholder="Tên học sinh hoặc admin" required class="w-full p-4 rounded-2xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <input type="password" id="password" placeholder="Mật khẩu" required class="w-full p-4 rounded-2xl bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <button type="submit" id="btn-login" class="w-full bg-[#007b5e] hover:bg-emerald-800 text-white font-bold py-4 rounded-2xl shadow-lg uppercase">Xem kết quả</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -45,14 +58,26 @@
             <div>
                 <div class="text-2xl font-black text-emerald-700 mb-10 italic uppercase">KIDROBOT</div>
                 <div class="flex items-center gap-3 text-emerald-700 bg-emerald-50 p-3 rounded-xl font-bold italic shadow-sm"><i class="fas fa-th-large"></i> Tổng quan</div>
+                
+                <div id="admin-panel" class="hidden-section mt-8 pt-6 border-t">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase italic mb-2 block">Danh sách học sinh</label>
+                    <select id="student-select" onchange="loadStudentData(this.value)" class="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 text-sm font-semibold outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="">Chọn học sinh...</option>
+                    </select>
+                </div>
             </div>
             <button onclick="location.reload()" class="text-red-500 font-bold p-3 hover:bg-red-50 rounded-xl mt-8"><i class="fas fa-sign-out-alt mr-2"></i>Thoát</button>
         </aside>
 
         <main class="flex-1 p-6 md:p-10 overflow-y-auto">
-            <header class="mb-10 border-b pb-6">
-                <h2 class="text-3xl font-black text-gray-800 italic">Xin chào, <span id="user-display" class="text-emerald-600">...</span></h2>
-                <p class="text-gray-500 font-medium italic">Học phần: <span id="txt-hocphan" class="text-gray-800 font-bold underline decoration-emerald-400">...</span></p>
+            <header class="mb-10 border-b pb-6 flex items-center gap-6">
+                <div class="avatar-container">
+                    <img id="user-avatar" src="" alt="Avatar" class="w-full h-full object-cover shadow-inner">
+                </div>
+                <div>
+                    <h2 class="text-3xl font-black text-gray-800 italic">Xin chào, <span id="user-display" class="text-emerald-600">...</span></h2>
+                    <p class="text-gray-500 font-medium italic">Học phần: <span id="txt-hocphan" class="text-gray-800 font-bold underline decoration-emerald-400">...</span></p>
+                </div>
             </header>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
@@ -86,20 +111,21 @@
     </div>
 
     <script>
-        // THAY URL SCRIPT CỦA BẠN VÀO ĐÂY
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx2ypwPGx27mGW9dt5C4DCheqP38U9ACJrDjnbI_Ah3hgEiFSatJhXDjtdt_PJu2oV5/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8-JfJ7OVIwIV85gyrrdEdMHxgK8xD6Ey2Rm9jHucYEo-1Pzi7UPqpv8mOuinwaYwx/exec";
         let sChart, aChart;
+        let adminDataBuffer = [];
 
         async function handleLogin(e) {
             e.preventDefault();
             const btn = document.getElementById('btn-login');
+            const userIn = document.getElementById('username').value;
             btn.innerHTML = 'ĐANG TẢI...'; btn.disabled = true;
 
             try {
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     body: JSON.stringify({
-                        username: document.getElementById('username').value,
+                        username: userIn,
                         password: document.getElementById('password').value
                     })
                 });
@@ -109,26 +135,57 @@
                     document.getElementById('login-page').classList.add('hidden-section');
                     document.getElementById('dashboard-page').classList.remove('hidden-section');
                     
-                    // Gán dữ liệu chính xác theo các Key từ GAS
-                    document.getElementById('user-display').innerText = result.username; 
-                    document.getElementById('txt-hocphan').innerText = result.hocPhan;   
-                    document.getElementById('txt-nhanxet').innerText = result.nhanXet;   
-
-                    renderAttendanceDays(result.diemDanh); 
-                    renderClassPhotos(result.images); 
-                    drawScoreChart(result.scores);
-                    drawAttendanceChart(result.diemDanh); 
-                    
-                    Fancybox.bind("[data-fancybox]", {});
-                } else { alert("Sai tài khoản!"); }
+                    // Xử lý giao diện Admin
+                    if (userIn.trim().toLowerCase() === "admin" && result.allStudents) {
+                        adminDataBuffer = result.allStudents;
+                        document.getElementById('admin-panel').classList.remove('hidden-section');
+                        const select = document.getElementById('student-select');
+                        select.innerHTML = '<option value="">Chọn học sinh...</option>' + 
+                            adminDataBuffer.map((s, i) => `<option value="${i}">${s.username}</option>`).join('');
+                        
+                        // Mặc định hiển thị dữ liệu dòng đầu tiên nếu có
+                        if(adminDataBuffer.length > 0) displayStudent(adminDataBuffer[0]);
+                    } else {
+                        displayStudent(result);
+                    }
+                } else { alert("Sai tài khoản hoặc mật khẩu!"); }
             } catch (err) { alert("Lỗi kết nối!"); } finally { btn.innerHTML = 'XEM KẾT QUẢ'; btn.disabled = false; }
+        }
+
+        function loadStudentData(index) {
+            if (index !== "") displayStudent(adminDataBuffer[index]);
+        }
+
+        function displayStudent(data) {
+            document.getElementById('user-display').innerText = data.username; 
+            document.getElementById('txt-hocphan').innerText = data.hocPhan;   
+            document.getElementById('txt-nhanxet').innerText = data.nhanXet;   
+
+            const avatarImg = document.getElementById('user-avatar');
+            if (data.avatar && data.avatar.length > 10) {
+                let avtUrl = data.avatar;
+                if (avtUrl.includes("drive.google.com")) {
+                    let fId = "";
+                    if (avtUrl.includes("id=")) fId = avtUrl.split("id=")[1].split("&")[0];
+                    else if (avtUrl.includes("/d/")) fId = avtUrl.split("/d/")[1].split("/")[0];
+                    avtUrl = `https://drive.google.com/thumbnail?id=${fId}&sz=w300`;
+                }
+                avatarImg.src = avtUrl;
+            } else {
+                avatarImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.username)}&background=007b5e&color=fff&bold=true`;
+            }
+
+            renderAttendanceDays(data.diemDanh); 
+            renderClassPhotos(data.images); 
+            drawScoreChart(data.scores);
+            drawAttendanceChart(data.diemDanh); 
+            Fancybox.bind("[data-fancybox]", {});
         }
 
         function renderAttendanceDays(str) {
             const container = document.getElementById('list-days');
             container.innerHTML = "";
             if (!str) return;
-            // Tách bằng cả dấu phẩy và dấu chấm để khớp định dạng 01/02.02/02
             const days = str.toString().split(/[,.]/);
             days.forEach(d => {
                 if(d.trim()) container.innerHTML += `<span class="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-xs font-bold border border-blue-100 italic flex items-center gap-2"><i class="fas fa-check-circle text-blue-300"></i>${d.trim()}</span>`;
@@ -138,66 +195,39 @@
         function renderClassPhotos(images) {
             const grid = document.getElementById('grid-class-photos');
             grid.innerHTML = "";
+            if(!images) return;
             images.forEach((url) => {
                 let fileId = "";
                 if (url.includes("id=")) fileId = url.split("id=")[1].split("&")[0];
                 else if (url.includes("/d/")) fileId = url.split("/d/")[1].split("/")[0];
-                
                 const thumbUrl = fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w800` : url;
-                grid.innerHTML += `
-                    <div class="class-photo-card border bg-gray-50">
-                        <a href="${thumbUrl}" data-fancybox="gallery">
-                            <img src="${thumbUrl}" class="w-full h-full object-cover">
-                        </a>
-                    </div>`;
+                grid.innerHTML += `<div class="class-photo-card border bg-gray-50"><a href="${thumbUrl}" data-fancybox="gallery"><img src="${thumbUrl}" class="w-full h-full object-cover"></a></div>`;
             });
         }
 
         function drawScoreChart(scores) {
             const dataV = scores.map(s => s === "" ? 0 : parseFloat(s));
-            
-            // Bảng màu đa dạng cho 12 cột như trong hình
-            const palette = [
-                '#ed64a6', '#63b3ed', '#f6ad55', '#4fd1c5', '#b794f4', '#f68059', 
-                '#a0aec0', '#7986cb', '#68d391', '#fc8181', '#4db6ac', '#7986cb'
-            ];
-
+            const palette = ['#ed64a6', '#63b3ed', '#f6ad55', '#4fd1c5', '#b794f4', '#f68059', '#a0aec0', '#7986cb', '#68d391', '#fc8181', '#4db6ac', '#7986cb'];
             if (sChart) sChart.destroy();
             sChart = new Chart(document.getElementById('scoreChart'), {
                 type: 'bar',
                 data: {
-                    // Hiển thị đầy đủ chữ "Bài" thay vì chỉ chữ "B"
                     labels: Array.from({length: 12}, (_, i) => `Bài ${i+1}`),
-                    datasets: [{ 
-                        data: dataV, 
-                        backgroundColor: palette, // Áp dụng bảng màu đa dạng
-                        borderRadius: 10,         // Bo góc đầu cột cho hiện đại
-                        barThickness: 22          // Độ rộng của cột
-                    }]
+                    datasets: [{ data: dataV, backgroundColor: palette, borderRadius: 10, barThickness: 22 }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false } // Ẩn chú thích vì màu đã rõ ràng
-                    },
+                    plugins: { legend: { display: false } },
                     scales: { 
-                        y: { 
-                            beginAtZero: true, 
-                            max: 10, 
-                            ticks: { stepSize: 1 },
-                            grid: { color: '#f1f5f9' } 
-                        }, 
-                        x: { 
-                            grid: { display: false } 
-                        } 
+                        y: { beginAtZero: true, max: 10, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } }, 
+                        x: { grid: { display: false } } 
                     }
                 }
             });
         }
 
         function drawAttendanceChart(str) {
-            // Đếm số buổi bằng cách tách dấu chấm/phẩy
             const count = str ? str.toString().split(/[,.]/).filter(d => d.trim() !== "").length : 0;
             document.getElementById('attendance-status').innerText = `${count}/12 Buổi`;
             if (aChart) aChart.destroy();
